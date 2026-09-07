@@ -3,8 +3,7 @@ plugins {
 }
 
 android {
-    namespace 'com.screenvideo.free'
-    compileSdk 35
+    compileSdk 30
 
     defaultConfig {
         applicationId 'com.screenvideo.free'
@@ -15,8 +14,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_1_7
+        targetCompatibility JavaVersion.VERSION_1_7
     }
 }
 
