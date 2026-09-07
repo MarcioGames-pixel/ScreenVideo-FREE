@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ScreenVideo FREE</string>
+    <string name="ready">PRONTO</string>
+    <string name="record">● GRAVAR</string>
+    <string name="stop">■ PARAR</string>
+</resources>

@@ -1,0 +1,24 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.screenvideo.free'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.screenvideo.free'
+        minSdk 10
+        targetSdk 28
+        versionCode 1
+        versionName '0.1'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_8
+        targetCompatibility JavaVersion.VERSION_8
+    }
+}
+
+dependencies {
+}

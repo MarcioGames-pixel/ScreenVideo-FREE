@@ -1,42 +1,43 @@
-# ScreenVideo FREE 📹
+# ScreenVideo FREE
 
-**ScreenVideo FREE** is a lightweight Android screen recorder with a nostalgic and simple interface.
+Nostalgic Android framebuffer recorder prototype for Android VMs and old Android devices.
 
-Designed for users who want an easy way to capture their screen while using **virtual machines, games, apps, and other Android software**.
+## Target
+- minSdkVersion 10 (Android 2.3 / Gingerbread)
+- Java
+- RGB565 framebuffer input
+- Default framebuffer: `/dev/graphics/fb0`
+- Default capture size: 480x800
+- Default FPS: 4
 
-## ✨ Features
+## Important
+The project deliberately does NOT bundle an FFmpeg binary. FFmpeg binaries are platform/build dependent and have separate licensing considerations.
 
-- 📹 Screen recording
-- 🖥️ VM-friendly
-- 🎮 Game and app recording
-- 🕹️ Nostalgic interface
-- ⚡ Lightweight and simple
-- 📱 Android support
-- 🆓 Completely free
+The app can:
+1. detect the framebuffer;
+2. test/read one RGB565 frame;
+3. capture a sequence of frames to a raw `.rgb565` file;
+4. optionally invoke an FFmpeg executable if one is available and accessible.
 
-## 🔨 Building
+For the VM used during development, the framebuffer was observed as RGB565 little-endian, 480x800, 768000 bytes/frame.
 
-The project can be built using **Android Studio** or automatically with **GitHub Actions**.
+### Permissions
+A normal Android application cannot automatically access another process' `/dev/graphics/fb0`.
+The VM must expose the framebuffer with permissions that the app UID can read, or a privileged/helper setup must provide access.
 
-The GitHub Actions workflow is located at:
+### Building
+Open the project folder in Android Studio and let Android Studio use/download the Android Gradle Plugin dependencies and an Android SDK.
 
-`.github/workflows/build.yml`
+Build:
+`./gradlew assembleDebug`
 
-## 📦 APK
+The resulting APK is under:
+`app/build/outputs/apk/debug/`
 
-After a successful GitHub Actions build, the generated APK can be downloaded from the workflow's **Artifacts** section.
+## UI
+The UI intentionally uses a dark, glossy, early-2010s Android/HTC-inspired style without copying HTC assets.
 
-## 🛠️ Requirements
-
-- Android Studio
-- JDK 17
-- Android SDK
-- Gradle
-
-## 📄 License
-
-This project is free to use and modify according to the license included in this repository.
-
----
-
-**ScreenVideo FREE** — simple recording with a nostalgic feel. 📼
+## Current 0.1 limitations
+- MP4 encoding depends on an FFmpeg executable being supplied separately.
+- Audio capture is not implemented yet.
+- Root/privileged framebuffer access is not implemented.
