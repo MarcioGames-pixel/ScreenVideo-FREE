@@ -34,17 +34,27 @@ jobs:
             "https://dl.google.com/android/repository/commandlinetools-linux-6609375_latest.zip" \
             -O /tmp/cmdline-tools.zip
 
+          mkdir -p /tmp/cmdline-tools
           unzip -q /tmp/cmdline-tools.zip -d /tmp/cmdline-tools
 
-          mkdir -p "$SDK/cmdline-tools/3.0"
+          TOOLS_DIR=$(find /tmp/cmdline-tools -type f -name sdkmanager -printf '%h\n' | head -n 1)
 
-          cp -R /tmp/cmdline-tools/cmdline-tools/* \
-            "$SDK/cmdline-tools/3.0/"
+          if [ -z "$TOOLS_DIR" ]; then
+            echo "ERRO: sdkmanager não encontrado no ZIP"
+            find /tmp/cmdline-tools -maxdepth 4 -type f | head -50
+            exit 1
+          fi
+
+          mkdir -p "$SDK/cmdline-tools/legacy"
+          cp -R "$TOOLS_DIR"/. "$SDK/cmdline-tools/legacy/"
 
           echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
-          echo "$SDK/cmdline-tools/3.0/bin" >> "$GITHUB_PATH"
+          echo "$SDK/cmdline-tools/legacy/bin" >> "$GITHUB_PATH"
           echo "$SDK/platform-tools" >> "$GITHUB_PATH"
+
+          echo "SDK instalado em: $SDK"
+          "$SDK/cmdline-tools/legacy/bin/sdkmanager" --version
 
       - name: Install Android SDK packages
         shell: bash
