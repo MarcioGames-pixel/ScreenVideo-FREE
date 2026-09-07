@@ -8,8 +8,8 @@ android {
 
     defaultConfig {
         applicationId 'com.screenvideo.free'
-        minSdk 10
-        targetSdk 28
+        minSdk 7
+        targetSdk 10
         versionCode 1
         versionName '0.1'
     }
