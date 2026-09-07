@@ -28,33 +28,59 @@ jobs:
           set -e
 
           SDK="$HOME/android-sdk"
+
+          rm -rf "$SDK"
+          rm -rf /tmp/cmdline-tools
+          rm -f /tmp/cmdline-tools.zip
+
           mkdir -p "$SDK/cmdline-tools"
+          mkdir -p /tmp/cmdline-tools
 
           wget -q \
             "https://dl.google.com/android/repository/commandlinetools-linux-6609375_latest.zip" \
             -O /tmp/cmdline-tools.zip
 
-          mkdir -p /tmp/cmdline-tools
-          unzip -q /tmp/cmdline-tools.zip -d /tmp/cmdline-tools
+          unzip -q /tmp/cmdline-tools.zip \
+            -d /tmp/cmdline-tools
 
-          TOOLS_DIR=$(find /tmp/cmdline-tools -type f -name sdkmanager -printf '%h\n' | head -n 1)
+          echo "Estrutura do ZIP:"
+          find /tmp/cmdline-tools -maxdepth 5 -type f | head -100
 
-          if [ -z "$TOOLS_DIR" ]; then
-            echo "ERRO: sdkmanager não encontrado no ZIP"
-            find /tmp/cmdline-tools -maxdepth 4 -type f | head -50
+          SDKMANAGER=$(find /tmp/cmdline-tools \
+            -type f \
+            -name sdkmanager \
+            | head -n 1)
+
+          if [ -z "$SDKMANAGER" ]; then
+            echo "ERRO: sdkmanager não encontrado"
             exit 1
           fi
 
+          TOOLS_DIR=$(dirname "$(dirname "$SDKMANAGER")")
+
+          echo "Tools encontradas em:"
+          echo "$TOOLS_DIR"
+
           mkdir -p "$SDK/cmdline-tools/legacy"
-          cp -R "$TOOLS_DIR"/. "$SDK/cmdline-tools/legacy/"
+
+          cp -R "$TOOLS_DIR"/. \
+            "$SDK/cmdline-tools/legacy/"
 
           echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
           echo "$SDK/cmdline-tools/legacy/bin" >> "$GITHUB_PATH"
           echo "$SDK/platform-tools" >> "$GITHUB_PATH"
 
-          echo "SDK instalado em: $SDK"
-          "$SDK/cmdline-tools/legacy/bin/sdkmanager" --version
+          echo "Conteúdo das ferramentas:"
+          find "$SDK/cmdline-tools/legacy" \
+            -maxdepth 3 \
+            -type f \
+            | head -100
+
+          echo "Testando sdkmanager:"
+
+          "$SDK/cmdline-tools/legacy/bin/sdkmanager" \
+            --version
 
       - name: Install Android SDK packages
         shell: bash
@@ -75,16 +101,26 @@ jobs:
           java-version: '11'
 
       - name: Check SDK
+        shell: bash
         run: |
           echo "ANDROID_HOME=$ANDROID_HOME"
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
           sdkmanager --version
 
       - name: Make Gradle executable
-        run: chmod +x gradlew
+        shell: bash
+        run: |
+          chmod +x gradlew
 
-      - name: Build
-        run: ./gradlew clean assembleDebug --stacktrace
+      - name: Clean
+        shell: bash
+        run: |
+          ./gradlew clean
+
+      - name: Build Debug APK
+        shell: bash
+        run: |
+          ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
