@@ -1,0 +1,50 @@
+name: Build ScreenVideo FREE
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: 🔧 Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: 📦 Install Android SDK
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager "platform-tools" \
+                     "platforms;android-35" \
+                     "build-tools;35.0.0"
+
+      - name: 🔐 Give Gradle permission
+        run: chmod +x gradlew
+
+      - name: 🧹 Clean
+        run: ./gradlew clean
+
+      - name: 🔨 Build Debug APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: 📤 Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ScreenVideo-FREE-debug
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
