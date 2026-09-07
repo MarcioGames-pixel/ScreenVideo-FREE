@@ -22,26 +22,37 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Install legacy Android SDK tools
+      - name: Install legacy Android command-line tools
+        shell: bash
         run: |
-          mkdir -p "$HOME/android-sdk/cmdline-tools"
+          set -e
 
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-6514223_latest.zip \
+          SDK="$HOME/android-sdk"
+          mkdir -p "$SDK/cmdline-tools"
+
+          wget -q \
+            "https://dl.google.com/android/repository/commandlinetools-linux-6609375_latest.zip" \
             -O /tmp/cmdline-tools.zip
 
-          unzip -q /tmp/cmdline-tools.zip \
-            -d "$HOME/android-sdk/cmdline-tools"
+          unzip -q /tmp/cmdline-tools.zip -d /tmp/cmdline-tools
 
-          mv "$HOME/android-sdk/cmdline-tools/tools" \
-             "$HOME/android-sdk/cmdline-tools/3.0"
+          mkdir -p "$SDK/cmdline-tools/3.0"
 
-          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> "$GITHUB_ENV"
-          echo "$HOME/android-sdk/cmdline-tools/3.0/bin" >> "$GITHUB_PATH"
-          echo "$HOME/android-sdk/platform-tools" >> "$GITHUB_PATH"
+          cp -R /tmp/cmdline-tools/cmdline-tools/* \
+            "$SDK/cmdline-tools/3.0/"
+
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          echo "$SDK/cmdline-tools/3.0/bin" >> "$GITHUB_PATH"
+          echo "$SDK/platform-tools" >> "$GITHUB_PATH"
 
       - name: Install Android SDK packages
+        shell: bash
         run: |
+          set -e
+
           yes | sdkmanager --licenses || true
+
           sdkmanager \
             "platform-tools" \
             "platforms;android-28" \
@@ -53,11 +64,17 @@ jobs:
           distribution: temurin
           java-version: '11'
 
+      - name: Check SDK
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          sdkmanager --version
+
       - name: Make Gradle executable
         run: chmod +x gradlew
 
       - name: Build
-        run: ./gradlew assembleDebug --stacktrace
+        run: ./gradlew clean assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
