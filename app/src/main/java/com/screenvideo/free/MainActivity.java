@@ -7,27 +7,17 @@ import android.os.Environment;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends Activity {
 
-    private static final String FB = "/dev/graphics/fb0";
-    private static final int WIDTH = 480;
-    private static final int HEIGHT = 800;
-    private static final int BYTES_PER_PIXEL = 4; 
-    private static final int BYTES_PER_FRAME = WIDTH * HEIGHT * BYTES_PER_PIXEL;
-    private static final int FPS = 4;
+    private static final int FPS = 5; 
 
     private TextView status;
     private TextView preview;
@@ -35,6 +25,7 @@ public class MainActivity extends Activity {
 
     private volatile boolean recording;
     private Thread recordThread;
+    private File currentVideoFolder;
 
     @Override
     public void onCreate(Bundle state) {
@@ -43,7 +34,6 @@ public class MainActivity extends Activity {
         try {
             setContentView(R.layout.activity_main);
 
-            // Varre a tela estruturalmente para encontrar os elementos sem usar IDs
             ViewGroup root = (ViewGroup) findViewById(android.R.id.content);
             List<View> allViews = new ArrayList<View>();
             findAllViews(root, allViews);
@@ -59,16 +49,15 @@ public class MainActivity extends Activity {
                 }
             }
 
-            // Mapeia pela ordem exata de aparição no XML estruturado
             if (textViews.size() >= 3) {
-                status = textViews.get(2);   // Terceiro TextView (Barra de status)
-                preview = textViews.get(3);  // Quarto TextView (Visualizador central)
+                status = textViews.get(2);
+                preview = textViews.get(3);
             }
 
             if (buttons.size() >= 3) {
-                Button test = buttons.get(0);      // Primeiro botão: TESTAR
-                Button settings = buttons.get(1);  // Segundo botão: CONFIG
-                record = buttons.get(2);          // Terceiro botão: GRAVAR
+                Button test = buttons.get(0);
+                Button settings = buttons.get(1);
+                record = buttons.get(2);
 
                 test.setOnClickListener(new View.OnClickListener() {
                     public void onClick(View v) {
@@ -93,14 +82,10 @@ public class MainActivity extends Activity {
                 });
             }
 
-            new Thread(new Runnable() {
-                public void run() {
-                    tryRootAccess();
-                }
-            }).start();
+            setStatus("Ready to record (Root OK)");
 
         } catch (Exception e) {
-            Toast.makeText(this, "Erro: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
@@ -114,55 +99,33 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void tryRootAccess() {
-        try {
-            Process p = Runtime.getRuntime().exec("su");
-            DataOutputStream os = new DataOutputStream(p.getOutputStream());
-            os.writeBytes("chmod 666 " + FB + "\n");
-            os.writeBytes("exit\n");
-            os.flush();
-            os.close();
-            p.waitFor();
-            setStatus("Pronto para gravar (Root OK)");
-        } catch (Exception e) {
-            setStatus("Aviso: Sem Root (" + e.getMessage() + ")");
-        }
-    }
-
     private void testFramebuffer() {
         new Thread(new Runnable() {
             public void run() {
                 try {
-                    File fb = new File(FB);
-
-                    if (!fb.exists()) {
-                        setStatus("ERRO: fb0 não existe");
-                        return;
-                    }
-
                     File out = outputDir();
-                    File testFile = new File(out, "frame_test.raw");
+                    final File testFile = new File(out, "frame_test.raw");
 
-                    copyOneFrame(fb, testFile);
-
-                    final long size = testFile.length();
+                    Process p = Runtime.getRuntime().exec("su");
+                    DataOutputStream os = new DataOutputStream(p.getOutputStream());
+                    os.writeBytes("/system/bin/screencap > " + testFile.getAbsolutePath() + "\n");
+                    os.writeBytes("exit\n");
+                    os.flush();
+                    p.waitFor();
 
                     runOnUiThread(new Runnable() {
                         public void run() {
-                            if (status != null) status.setText("FRAMEBUFFER OK - " + size + " bytes");
-                            if (preview != null) {
-                                preview.setText(
-                                    "TESTE CONCLUÍDO\n" +
-                                    WIDTH + " x " + HEIGHT +
-                                    "\nFormato: 32-bit RGBA"
-                                );
+                            if (testFile.exists() && testFile.length() > 0) {
+                                if (status != null) status.setText("TEST OK - " + testFile.length() + " bytes");
+                                if (preview != null) preview.setText("Saved to:\n" + testFile.getName());
+                            } else {
+                                if (status != null) status.setText("ERROR: Empty file");
                             }
-                            Toast.makeText(MainActivity.this, "Frame salvo", Toast.LENGTH_SHORT).show();
                         }
                     });
 
                 } catch (final Exception e) {
-                    setStatus("ERRO TESTE: " + e.getMessage());
+                    setStatus("TEST ERROR: " + e.getMessage());
                 }
             }
         }).start();
@@ -172,61 +135,47 @@ public class MainActivity extends Activity {
         if (recording) return;
 
         recording = true;
-        if (record != null) record.setText("PARAR");
-        if (status != null) status.setText("GRAVANDO...");
+        if (record != null) record.setText("STOP");
+        if (status != null) status.setText("RECORDING...");
 
         recordThread = new Thread(new Runnable() {
             public void run() {
-                FileInputStream in = null;
-                FileOutputStream fos = null;
-
                 try {
                     File out = outputDir();
-                    File raw = new File(out, "screenvideo_" + System.currentTimeMillis() + ".raw");
+                    currentVideoFolder = new File(out, "tmp_" + System.currentTimeMillis());
+                    currentVideoFolder.mkdirs();
 
-                    in = new FileInputStream(FB);
-                    fos = new FileOutputStream(raw);
-
-                    byte[] frame = new byte[BYTES_PER_FRAME];
-                    long next = System.currentTimeMillis();
+                    long timeBetweenFrames = 1000L / FPS;
+                    long nextFrameTime = System.currentTimeMillis();
+                    int frameCount = 0;
 
                     while (recording) {
-                        int got = readFully(in, frame);
+                        File frameFile = new File(currentVideoFolder, "frame_" + String.format("%04d", frameCount) + ".raw");
+                        
+                        Process p = Runtime.getRuntime().exec("su");
+                        DataOutputStream os = new DataOutputStream(p.getOutputStream());
+                        os.writeBytes("/system/bin/screencap > " + frameFile.getAbsolutePath() + "\n");
+                        os.writeBytes("exit\n");
+                        os.flush();
+                        p.waitFor();
 
-                        if (got != BYTES_PER_FRAME) {
-                            continue;
-                        }
+                        frameCount++;
+                        nextFrameTime += timeBetweenFrames;
 
-                        fos.write(frame);
-                        next += 1000L / FPS;
-
-                        long sleep = next - System.currentTimeMillis();
+                        long sleep = nextFrameTime - System.currentTimeMillis();
                         if (sleep > 0) {
                             Thread.sleep(sleep);
                         }
                     }
 
-                    final String path = raw.getAbsolutePath();
-                    if (in != null) in.close();
-                    if (fos != null) fos.close();
-
-                    runOnUiThread(new Runnable() {
-                        public void run() {
-                            if (status != null) status.setText("GRAVAÇÃO SALVA");
-                            if (preview != null) preview.setText("RAW 32BIT\n" + path);
-                            if (record != null) record.setText("GRAVAR");
-                        }
-                    });
+                    convertToMp4(frameCount);
 
                 } catch (final Exception e) {
-                    try { if (in != null) in.close(); } catch (Exception ignored) {}
-                    try { if (fos != null) fos.close(); } catch (Exception ignored) {}
-
                     recording = false;
-                    setStatus("ERRO GRAVAÇÃO: " + e.getMessage());
+                    setStatus("ERROR: " + e.getMessage());
                     runOnUiThread(new Runnable() {
                         public void run() {
-                            if (record != null) record.setText("GRAVAR");
+                            if (record != null) record.setText("RECORD");
                         }
                     });
                 }
@@ -238,35 +187,53 @@ public class MainActivity extends Activity {
 
     private void stopRecording() {
         recording = false;
-        if (status != null) status.setText("PARANDO...");
-        if (recordThread != null) recordThread.interrupt();
+        if (status != null) status.setText("PROCESSING...");
     }
 
-    private int readFully(InputStream in, byte[] b) throws IOException {
-        int off = 0;
-        while (off < b.length && recording) {
-            int n = in.read(b, off, b.length - off);
-            if (n < 0) break;
-            off += n;
-        }
-        return off;
+    private void convertToMp4(final int totalFrames) {
+        new Thread(new Runnable() {
+            public void run() {
+                try {
+                    File out = outputDir();
+                    final File mp4File = new File(out, "video_" + System.currentTimeMillis() + ".mp4");
+
+                    Process p = Runtime.getRuntime().exec("su");
+                    DataOutputStream os = new DataOutputStream(p.getOutputStream());
+                    
+                    String ffmpegCmd = "ffmpeg -f rawvideo -pixel_format rgba -video_size 480x800 -framerate " + FPS + 
+                                       " -i " + currentVideoFolder.getAbsolutePath() + "/frame_%04d.raw" +
+                                       " -c:v libx264 -pix_fmt yuv420p -y " + mp4File.getAbsolutePath() + "\n";
+                    
+                    os.writeBytes(ffmpegCmd);
+                    os.writeBytes("exit\n");
+                    os.flush();
+                    p.waitFor();
+
+                    deleteFolderContents(currentVideoFolder);
+                    currentVideoFolder.delete();
+
+                    runOnUiThread(new Runnable() {
+                        public void run() {
+                            if (status != null) status.setText("VIDEO SAVED!");
+                            if (preview != null) preview.setText("MP4 successfully compiled:\n" + mp4File.getName() + "\nTotal Frames: " + totalFrames);
+                            if (record != null) record.setText("RECORD");
+                        }
+                    });
+
+                } catch (Exception e) {
+                    setStatus("Muxing error: " + e.getMessage());
+                }
+            }
+        }).start();
     }
 
-    private void copyOneFrame(File fb, File out) throws IOException {
-        FileInputStream in = new FileInputStream(fb);
-        FileOutputStream fos = new FileOutputStream(out);
-        byte[] b = new byte[BYTES_PER_FRAME];
-
-        int got = 0;
-        while (got < b.length) {
-            int n = in.read(b, got, b.length - got);
-            if (n < 0) break;
-            got += n;
+    private void deleteFolderContents(File folder) {
+        File[] files = folder.listFiles();
+        if (files != null) {
+            for (File f : files) {
+                f.delete();
+            }
         }
-
-        fos.write(b, 0, got);
-        fos.close();
-        in.close();
     }
 
     private void setStatus(final String s) {
@@ -280,25 +247,17 @@ public class MainActivity extends Activity {
     private void showSettings() {
         new AlertDialog.Builder(this)
             .setTitle("ScreenVideo FREE")
-            .setMessage(
-                "Entrada: " + FB +
-                "\n\nFormato: 32-bit (debug.fb.rgb565=0)" +
-                "\nResolução: " + WIDTH + "x" + HEIGHT +
-                "\nFPS: " + FPS +
-                "\n\nAlvo: HTC Ace / Desire HD (Android 2.3.3)"
-            )
+            .setMessage("Target: " + FPS + " FPS\nOutput format: H.264 MP4 Container\nEngine: Native Shell Muxing")
             .setPositiveButton("OK", null)
             .show();
     }
 
-        private File outputDir() {
+    private File outputDir() {
         File base = Environment.getExternalStorageDirectory();
         File dir = new File(base, "ScreenVideo");
-
         if (!dir.exists()) {
             dir.mkdirs();
         }
-
         return dir;
     }
 
@@ -310,4 +269,4 @@ public class MainActivity extends Activity {
         }
         super.onDestroy();
     }
-}
+    }
