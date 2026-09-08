@@ -5,7 +5,9 @@ import android.app.AlertDialog;
 import android.os.Bundle;
 import android.os.Environment;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -15,13 +17,15 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends Activity {
 
     private static final String FB = "/dev/graphics/fb0";
     private static final int WIDTH = 480;
     private static final int HEIGHT = 800;
-    private static final int BYTES_PER_PIXEL = 4; // Ajustado para os 32-bit do seu build.prop
+    private static final int BYTES_PER_PIXEL = 4; 
     private static final int BYTES_PER_FRAME = WIDTH * HEIGHT * BYTES_PER_PIXEL;
     private static final int FPS = 4;
 
@@ -37,35 +41,47 @@ public class MainActivity extends Activity {
         super.onCreate(state);
 
         try {
-            // 1. Infla o layout com segurança
             setContentView(R.layout.activity_main);
 
-            // 2. Vincula os componentes mapeando possíveis nulos para evitar crash
-            status = (TextView) findViewById(R.id.status);
-            preview = (TextView) findViewById(R.id.preview);
-            record = (Button) findViewById(R.id.record);
+            // Varre a tela estruturalmente para encontrar os elementos sem usar IDs
+            ViewGroup root = (ViewGroup) findViewById(android.R.id.content);
+            List<View> allViews = new ArrayList<View>();
+            findAllViews(root, allViews);
 
-            Button test = (Button) findViewById(R.id.test);
-            Button settings = (Button) findViewById(R.id.settings);
+            List<TextView> textViews = new ArrayList<TextView>();
+            List<Button> buttons = new ArrayList<Button>();
 
-            // 3. Configura os ouvintes de clique apenas se os botões existirem no XML
-            if (test != null) {
+            for (View v : allViews) {
+                if (v instanceof Button) {
+                    buttons.add((Button) v);
+                } else if (v instanceof TextView) {
+                    textViews.add((TextView) v);
+                }
+            }
+
+            // Mapeia pela ordem exata de aparição no XML estruturado
+            if (textViews.size() >= 3) {
+                status = textViews.get(2);   // Terceiro TextView (Barra de status)
+                preview = textViews.get(3);  // Quarto TextView (Visualizador central)
+            }
+
+            if (buttons.size() >= 3) {
+                Button test = buttons.get(0);      // Primeiro botão: TESTAR
+                Button settings = buttons.get(1);  // Segundo botão: CONFIG
+                record = buttons.get(2);          // Terceiro botão: GRAVAR
+
                 test.setOnClickListener(new View.OnClickListener() {
                     public void onClick(View v) {
                         testFramebuffer();
                     }
                 });
-            }
 
-            if (settings != null) {
                 settings.setOnClickListener(new View.OnClickListener() {
                     public void onClick(View v) {
                         showSettings();
                     }
                 });
-            }
 
-            if (record != null) {
                 record.setOnClickListener(new View.OnClickListener() {
                     public void onClick(View v) {
                         if (recording) {
@@ -77,8 +93,6 @@ public class MainActivity extends Activity {
                 });
             }
 
-            // CORREÇÃO CRÍTICA: Executa a checagem e pedido de ROOT em segundo plano
-            // para nunca travar ou crashar a interface ao abrir o app
             new Thread(new Runnable() {
                 public void run() {
                     tryRootAccess();
@@ -86,8 +100,17 @@ public class MainActivity extends Activity {
             }).start();
 
         } catch (Exception e) {
-            // Captura qualquer erro de inflagem de layout e impede o fechamento repentino
-            Toast.makeText(this, "Erro na inicialização: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Erro: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void findAllViews(ViewGroup parent, List<View> views) {
+        for (int i = 0; i < parent.getChildCount(); i++) {
+            View child = parent.getChildAt(i);
+            views.add(child);
+            if (child instanceof ViewGroup) {
+                findAllViews((ViewGroup) child, views);
+            }
         }
     }
 
@@ -99,11 +122,10 @@ public class MainActivity extends Activity {
             os.writeBytes("exit\n");
             os.flush();
             os.close();
-            p.waitFor(); // Aguarda a resposta do prompt do Superuser sem travar a UI
-            
+            p.waitFor();
             setStatus("Pronto para gravar (Root OK)");
         } catch (Exception e) {
-            setStatus("Aviso: Sem permissão Root (" + e.getMessage() + ")");
+            setStatus("Aviso: Sem Root (" + e.getMessage() + ")");
         }
     }
 
@@ -269,19 +291,23 @@ public class MainActivity extends Activity {
             .show();
     }
 
-    private File outputDir() {
+        private File outputDir() {
         File base = Environment.getExternalStorageDirectory();
         File dir = new File(base, "ScreenVideo");
+
         if (!dir.exists()) {
             dir.mkdirs();
         }
+
         return dir;
     }
 
     @Override
     protected void onDestroy() {
         recording = false;
-        if (recordThread != null) recordThread.interrupt();
+        if (recordThread != null) {
+            recordThread.interrupt();
+        }
         super.onDestroy();
     }
-                        }
+}
