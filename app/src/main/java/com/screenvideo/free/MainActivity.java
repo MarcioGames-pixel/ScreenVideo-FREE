@@ -108,9 +108,7 @@ public class MainActivity extends Activity {
 
                     Process p = Runtime.getRuntime().exec("su");
                     DataOutputStream os = new DataOutputStream(p.getOutputStream());
-                    
-                    // CORREÇÃO: Chama explicitamente o sh -c para evitar o erro de Broken Pipe
-                    os.writeBytes("sh -c '/system/bin/screencap > " + testFile.getAbsolutePath() + "'\n");
+                    os.writeBytes("screencap > " + testFile.getAbsolutePath() + "\n");
                     os.writeBytes("exit\n");
                     os.flush();
                     p.waitFor();
@@ -142,6 +140,10 @@ public class MainActivity extends Activity {
 
         recordThread = new Thread(new Runnable() {
             public void run() {
+                Process suProcess = null;
+                DataOutputStream os = null;
+                int frameCount = 0;
+
                 try {
                     File out = outputDir();
                     currentVideoFolder = new File(out, "tmp_" + System.currentTimeMillis());
@@ -149,19 +151,17 @@ public class MainActivity extends Activity {
 
                     long timeBetweenFrames = 1000L / FPS;
                     long nextFrameTime = System.currentTimeMillis();
-                    int frameCount = 0;
+
+                    // Open ONE persistent root shell session for the whole recording
+                    suProcess = Runtime.getRuntime().exec("su");
+                    os = new DataOutputStream(suProcess.getOutputStream());
 
                     while (recording) {
                         File frameFile = new File(currentVideoFolder, "frame_" + String.format("%04d", frameCount) + ".raw");
                         
-                        Process p = Runtime.getRuntime().exec("su");
-                        DataOutputStream os = new DataOutputStream(p.getOutputStream());
-                        
-                        // CORREÇÃO: Aplicado sh -c também dentro da gravação contínua
-                        os.writeBytes("sh -c '/system/bin/screencap > " + frameFile.getAbsolutePath() + "'\n");
-                        os.writeBytes("exit\n");
+                        // Push command directly into the active open pipe line
+                        os.writeBytes("screencap > " + frameFile.getAbsolutePath() + "\n");
                         os.flush();
-                        p.waitFor();
 
                         frameCount++;
                         nextFrameTime += timeBetweenFrames;
@@ -172,13 +172,25 @@ public class MainActivity extends Activity {
                         }
                     }
 
-                    convertToMp4(frameCount);
+                    // Gracefully close down the continuous pipe session
+                    os.writeBytes("exit\n");
+                    os.flush();
+                    suProcess.waitFor();
 
                 } catch (final Exception e) {
-                    recording = false;
                     setStatus("ERROR: " + e.getMessage());
+                } finally {
+                    try { if (os != null) os.close(); } catch (Exception ignored) {}
+                    try { if (suProcess != null) suProcess.destroy(); } catch (Exception ignored) {}
+                }
+
+                if (frameCount > 0) {
+                    convertToMp4(frameCount);
+                } else {
+                    recording = false;
                     runOnUiThread(new Runnable() {
                         public void run() {
+                            if (status != null) status.setText("ERROR: 0 frames recorded");
                             if (record != null) record.setText("RECORD");
                         }
                     });
@@ -251,12 +263,12 @@ public class MainActivity extends Activity {
     private void showSettings() {
         new AlertDialog.Builder(this)
             .setTitle("ScreenVideo FREE")
-            .setMessage("Target: " + FPS + " FPS\nOutput format: H.264 MP4 Container\nEngine: Native Shell Muxing")
+            .setMessage("Target: " + FPS + " FPS\nOutput format: H.264 MP4 Container\nEngine: Persistent Shell Pipe")
             .setPositiveButton("OK", null)
             .show();
     }
 
-    private File outputDir() {
+        private File outputDir() {
         File base = Environment.getExternalStorageDirectory();
         File dir = new File(base, "ScreenVideo");
         if (!dir.exists()) {
@@ -273,4 +285,4 @@ public class MainActivity extends Activity {
         }
         super.onDestroy();
     }
-    }
+}
