@@ -108,7 +108,9 @@ public class MainActivity extends Activity {
 
                     Process p = Runtime.getRuntime().exec("su");
                     DataOutputStream os = new DataOutputStream(p.getOutputStream());
-                    os.writeBytes("/system/bin/screencap > " + testFile.getAbsolutePath() + "\n");
+                    
+                    // CORREÇÃO: Chama explicitamente o sh -c para evitar o erro de Broken Pipe
+                    os.writeBytes("sh -c '/system/bin/screencap > " + testFile.getAbsolutePath() + "'\n");
                     os.writeBytes("exit\n");
                     os.flush();
                     p.waitFor();
@@ -154,7 +156,9 @@ public class MainActivity extends Activity {
                         
                         Process p = Runtime.getRuntime().exec("su");
                         DataOutputStream os = new DataOutputStream(p.getOutputStream());
-                        os.writeBytes("/system/bin/screencap > " + frameFile.getAbsolutePath() + "\n");
+                        
+                        // CORREÇÃO: Aplicado sh -c também dentro da gravação contínua
+                        os.writeBytes("sh -c '/system/bin/screencap > " + frameFile.getAbsolutePath() + "'\n");
                         os.writeBytes("exit\n");
                         os.flush();
                         p.waitFor();
