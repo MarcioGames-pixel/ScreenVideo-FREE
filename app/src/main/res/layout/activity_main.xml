@@ -1,106 +1,103 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
     android:orientation="vertical"
+    android:background="#FF121C24"
     android:padding="10dp"
-    android:background="@drawable/bg_main">
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
 
     <LinearLayout
+        android:gravity="center_vertical"
+        android:background="#FF1A2630"
         android:layout_width="match_parent"
         android:layout_height="48dp"
-        android:gravity="center_vertical"
-        android:background="@drawable/panel">
+        android:paddingLeft="8dp"
+        android:paddingRight="8dp">
 
         <TextView
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="#FFE7EDF2"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/app_name"
-            android:textColor="#e7edf2"
-            android:textSize="20sp"
-            android:textStyle="bold"/>
+            android:text="ScreenVideo FREE"
+            android:layout_weight="1.0" />
 
         <TextView
             android:id="@+id/version"
+            android:textSize="12sp"
+            android:textColor="#FF9EACB7"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="v0.1"
-            android:textColor="#9eacb7"
-            android:textSize="12sp"/>
+            android:text="v0.1" />
+
     </LinearLayout>
 
     <TextView
-        android:id="@+id/status"
+        android:textStyle="bold"
+        android:textColor="#FFB8D5E8"
+        android:gravity="center"
+        android:background="#FF1A2630"
         android:layout_width="match_parent"
         android:layout_height="42dp"
         android:layout_marginTop="10dp"
-        android:gravity="center"
-        android:text="@string/ready"
-        android:textColor="#b8d5e8"
-        android:textStyle="bold"
-        android:background="@drawable/panel"/>
+        android:text="READY" />
 
     <TextView
-        android:id="@+id/preview"
+        android:textSize="18sp"
+        android:textColor="#FF7F909D"
+        android:gravity="center"
+        android:background="#FF1A2630"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
         android:layout_marginTop="10dp"
-        android:gravity="center"
-        android:text="FRAMEBUFFER
-480 × 800
-RGB565"
-        android:textColor="#7f909d"
-        android:textSize="18sp"
-        android:background="@drawable/panel"/>
+        android:text="FRAMEBUFFER 480 × 800 RGBA"
+        android:layout_weight="1.0" />
 
     <LinearLayout
+        android:orientation="horizontal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:orientation="horizontal">
+        android:layout_marginTop="10dp">
 
         <Button
             android:id="@+id/test"
+            android:textColor="#FFEEF4F8"
             android:layout_width="0dp"
             android:layout_height="48dp"
-            android:layout_weight="1"
-            android:text="TESTAR"
-            android:textColor="#eef4f8"
-            android:background="@drawable/button"/>
+            android:text="TEST"
+            android:layout_weight="1.0" />
 
-        <Space
+        <View
             android:layout_width="8dp"
-            android:layout_height="1dp"/>
+            android:layout_height="1dp" />
 
         <Button
             android:id="@+id/settings"
+            android:textColor="#FFEEF4F8"
             android:layout_width="0dp"
             android:layout_height="48dp"
-            android:layout_weight="1"
-            android:text="CONFIG"
-            android:textColor="#eef4f8"
-            android:background="@drawable/button"/>
+            android:text="SETTINGS"
+            android:layout_weight="1.0" />
+
     </LinearLayout>
 
     <Button
         android:id="@+id/record"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFFFF"
         android:layout_width="match_parent"
         android:layout_height="58dp"
         android:layout_marginTop="10dp"
-        android:text="@string/record"
-        android:textColor="#ffffff"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:background="@drawable/button"/>
+        android:text="RECORD" />
 
     <TextView
-        android:id="@+id/info"
+        android:textSize="11sp"
+        android:textColor="#FF81919D"
+        android:gravity="center"
         android:layout_width="match_parent"
         android:layout_height="36dp"
-        android:gravity="center"
-        android:text="4 FPS  •  RGB565  •  /dev/graphics/fb0"
-        android:textColor="#81919d"
-        android:textSize="11sp"/>
+        android:text="5 FPS  •  32-bit RGBA  •  Shell Muxer" />
+
 </LinearLayout>
