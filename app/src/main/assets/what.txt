@@ -1,0 +1,1 @@
+ffmpeg is required to convert to mp4, but the ffmpeg dependency has been removed from Screencast and it's embedded within the APK.
