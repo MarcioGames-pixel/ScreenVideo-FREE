@@ -2,6 +2,7 @@ package com.screenvideo.free;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.os.Bundle;
 import android.os.Environment;
 import android.view.View;
@@ -12,6 +13,8 @@ import android.widget.Toast;
 
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,6 +29,7 @@ public class MainActivity extends Activity {
     private volatile boolean recording;
     private Thread recordThread;
     private File currentVideoFolder;
+    private File ffmpegBin;
 
     @Override
     public void onCreate(Bundle state) {
@@ -49,7 +53,7 @@ public class MainActivity extends Activity {
                 }
             }
 
-            if (textViews.size() >= 3) {
+            if (textViews.size() >= 4) {
                 status = textViews.get(2);
                 preview = textViews.get(3);
             }
@@ -82,11 +86,50 @@ public class MainActivity extends Activity {
                 });
             }
 
-            setStatus("Ready to record (Root OK)");
+            // Inicializa e extrai o binário do FFmpeg contido na pasta assets/
+            initFFmpeg();
 
         } catch (Exception e) {
             Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
+    }
+
+    private void initFFmpeg() {
+        new Thread(new Runnable() {
+            public void run() {
+                try {
+                    ffmpegBin = new File(getFilesDir(), "ffmpeg");
+                    
+                    // Extrai o arquivo apenas se ele não existir para economizar processamento
+                    if (!ffmpegBin.exists()) {
+                        setStatus("Extracting FFmpeg from assets...");
+                        InputStream is = getAssets().open("ffmpeg");
+                        FileOutputStream os = new FileOutputStream(ffmpegBin);
+                        byte[] buffer = new byte[8192];
+                        int read;
+                        while ((read = is.read(buffer)) != -1) {
+                            os.write(buffer, 0, read);
+                        }
+                        os.flush();
+                        os.close();
+                        is.close();
+                    }
+
+                    // Força permissão de execução via terminal root (obrigatório para Gingerbread)
+                    Process p = Runtime.getRuntime().exec("su");
+                    DataOutputStream dos = new DataOutputStream(p.getOutputStream());
+                    dos.writeBytes("chmod 755 " + ffmpegBin.getAbsolutePath() + "\n");
+                    dos.writeBytes("exit\n");
+                    dos.flush();
+                    p.waitFor();
+
+                    setStatus("Ready to record (Root & FFmpeg OK)");
+
+                } catch (Exception e) {
+                    setStatus("FFmpeg initialization error: " + e.getMessage());
+                }
+            }
+        }).start();
     }
 
     private void findAllViews(ViewGroup parent, List<View> views) {
@@ -108,7 +151,7 @@ public class MainActivity extends Activity {
 
                     Process p = Runtime.getRuntime().exec("su");
                     DataOutputStream os = new DataOutputStream(p.getOutputStream());
-                    os.writeBytes("screencap > " + testFile.getAbsolutePath() + "\n");
+                    os.writeBytes("cat /dev/graphics/fb0 > " + testFile.getAbsolutePath() + "\n");
                     os.writeBytes("exit\n");
                     os.flush();
                     p.waitFor();
@@ -119,7 +162,7 @@ public class MainActivity extends Activity {
                                 if (status != null) status.setText("TEST OK - " + testFile.length() + " bytes");
                                 if (preview != null) preview.setText("Saved to:\n" + testFile.getName());
                             } else {
-                                if (status != null) status.setText("ERROR: Empty file");
+                                if (status != null) status.setText("ERROR: /dev/graphics/fb0 returned empty");
                             }
                         }
                     });
@@ -152,15 +195,13 @@ public class MainActivity extends Activity {
                     long timeBetweenFrames = 1000L / FPS;
                     long nextFrameTime = System.currentTimeMillis();
 
-                    // Open ONE persistent root shell session for the whole recording
                     suProcess = Runtime.getRuntime().exec("su");
                     os = new DataOutputStream(suProcess.getOutputStream());
 
                     while (recording) {
                         File frameFile = new File(currentVideoFolder, "frame_" + String.format("%04d", frameCount) + ".raw");
                         
-                        // Push command directly into the active open pipe line
-                        os.writeBytes("screencap > " + frameFile.getAbsolutePath() + "\n");
+                        os.writeBytes("cat /dev/graphics/fb0 > " + frameFile.getAbsolutePath() + "\n");
                         os.flush();
 
                         frameCount++;
@@ -172,7 +213,6 @@ public class MainActivity extends Activity {
                         }
                     }
 
-                    // Gracefully close down the continuous pipe session
                     os.writeBytes("exit\n");
                     os.flush();
                     suProcess.waitFor();
@@ -216,28 +256,44 @@ public class MainActivity extends Activity {
                     Process p = Runtime.getRuntime().exec("su");
                     DataOutputStream os = new DataOutputStream(p.getOutputStream());
                     
-                    String ffmpegCmd = "ffmpeg -f rawvideo -pixel_format rgba -video_size 480x800 -framerate " + FPS + 
+                    // Usa o binário extraído do assets executando com o path absoluto interno do app
+                    String ffmpegPath = (ffmpegBin != null) ? ffmpegBin.getAbsolutePath() : "ffmpeg";
+                    
+                                        String ffmpegCmd = ffmpegPath + " -f rawvideo -pixel_format rgb565 -video_size 480x800 -framerate " + FPS + 
                                        " -i " + currentVideoFolder.getAbsolutePath() + "/frame_%04d.raw" +
                                        " -c:v libx264 -pix_fmt yuv420p -y " + mp4File.getAbsolutePath() + "\n";
                     
                     os.writeBytes(ffmpegCmd);
                     os.writeBytes("exit\n");
                     os.flush();
-                    p.waitFor();
+                    int exitVal = p.waitFor();
 
+                    // Limpeza dos arquivos de frames temporários para liberar espaço
                     deleteFolderContents(currentVideoFolder);
                     currentVideoFolder.delete();
 
                     runOnUiThread(new Runnable() {
                         public void run() {
-                            if (status != null) status.setText("VIDEO SAVED!");
-                            if (preview != null) preview.setText("MP4 successfully compiled:\n" + mp4File.getName() + "\nTotal Frames: " + totalFrames);
+                            recording = false;
+                            if (exitVal == 0 && mp4File.exists() && mp4File.length() > 0) {
+                                if (status != null) status.setText("VIDEO SAVED!");
+                                if (preview != null) preview.setText("MP4 successfully compiled:\n" + mp4File.getName() + "\nTotal Frames: " + totalFrames);
+                            } else {
+                                if (status != null) status.setText("Muxing error (Exit code: " + exitVal + ")");
+                            }
                             if (record != null) record.setText("RECORD");
                         }
                     });
 
                 } catch (Exception e) {
-                    setStatus("Muxing error: " + e.getMessage());
+                    final String errorMsg = e.getMessage();
+                    runOnUiThread(new Runnable() {
+                        public void run() {
+                            recording = false;
+                            setStatus("Muxing error: " + errorMsg);
+                            if (record != null) record.setText("RECORD");
+                        }
+                    });
                 }
             }
         }).start();
@@ -263,12 +319,12 @@ public class MainActivity extends Activity {
     private void showSettings() {
         new AlertDialog.Builder(this)
             .setTitle("ScreenVideo FREE")
-            .setMessage("Target: " + FPS + " FPS\nOutput format: H.264 MP4 Container\nEngine: Persistent Shell Pipe")
+            .setMessage("Target: " + FPS + " FPS\nOutput format: H.264 MP4 Container\nEngine: Persistent FB0 Pipe & Assets FFmpeg")
             .setPositiveButton("OK", null)
             .show();
     }
 
-        private File outputDir() {
+    private File outputDir() {
         File base = Environment.getExternalStorageDirectory();
         File dir = new File(base, "ScreenVideo");
         if (!dir.exists()) {
