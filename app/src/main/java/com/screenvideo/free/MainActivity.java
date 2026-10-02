@@ -266,7 +266,7 @@ public class MainActivity extends Activity {
                     os.writeBytes(ffmpegCmd);
                     os.writeBytes("exit\n");
                     os.flush();
-                    int exitVal = p.waitFor();
+                    final int exitVal = p.waitFor();
 
                     // Limpeza dos arquivos de frames temporários para liberar espaço
                     deleteFolderContents(currentVideoFolder);
