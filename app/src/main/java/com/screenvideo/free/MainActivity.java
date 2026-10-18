@@ -3,341 +3,227 @@ package com.screenvideo.free;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.Intent;
+import android.media.MediaRecorder;
+import android.media.projection.MediaProjection;
+import android.media.projection.MediaProjectionManager;
 import android.os.Bundle;
 import android.os.Environment;
+import android.util.DisplayMetrics;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.hardware.display.DisplayManager;
+import android.hardware.display.VirtualDisplay;
 
-import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 public class MainActivity extends Activity {
-
-    private static final int FPS = 5; 
+    private static final int REQUEST_CAPTURE = 4102;
 
     private TextView status;
     private TextView preview;
     private Button record;
-
-    private volatile boolean recording;
-    private Thread recordThread;
-    private File currentVideoFolder;
-    private File ffmpegBin;
+    private MediaProjectionManager projectionManager;
+    private MediaProjection projection;
+    private VirtualDisplay virtualDisplay;
+    private MediaRecorder mediaRecorder;
+    private File outputFile;
+    private boolean recording;
+    private int screenWidth;
+    private int screenHeight;
+    private int screenDensity;
 
     @Override
     public void onCreate(Bundle state) {
         super.onCreate(state);
+        setContentView(R.layout.activity_main);
 
+        status = (TextView) findViewById(R.id.status);
+        preview = (TextView) findViewById(R.id.preview);
+        record = (Button) findViewById(R.id.record);
+        projectionManager = (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+
+        findViewById(R.id.test).setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { checkDisplay(); }
+        });
+        findViewById(R.id.settings).setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { showSettings(); }
+        });
+        record.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                if (recording) stopRecording();
+                else requestRecordingPermission();
+            }
+        });
+        checkDisplay();
+    }
+
+    private void checkDisplay() {
+        DisplayMetrics metrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getRealMetrics(metrics);
+        screenWidth = metrics.widthPixels & ~1;
+        screenHeight = metrics.heightPixels & ~1;
+        screenDensity = metrics.densityDpi;
+        status.setText("READY TO RECORD");
+        preview.setText("DISPLAY\n" + screenWidth + " × " + screenHeight
+                + "\nAndroid screen capture · VM window included");
+    }
+
+    private void requestRecordingPermission() {
+        if (projectionManager == null) {
+            status.setText("Screen capture is unavailable on this Android version.");
+            return;
+        }
         try {
-            setContentView(R.layout.activity_main);
-
-            ViewGroup root = (ViewGroup) findViewById(android.R.id.content);
-            List<View> allViews = new ArrayList<View>();
-            findAllViews(root, allViews);
-
-            List<TextView> textViews = new ArrayList<TextView>();
-            List<Button> buttons = new ArrayList<Button>();
-
-            for (View v : allViews) {
-                if (v instanceof Button) {
-                    buttons.add((Button) v);
-                } else if (v instanceof TextView) {
-                    textViews.add((TextView) v);
-                }
-            }
-
-            if (textViews.size() >= 4) {
-                status = textViews.get(2);
-                preview = textViews.get(3);
-            }
-
-            if (buttons.size() >= 3) {
-                Button test = buttons.get(0);
-                Button settings = buttons.get(1);
-                record = buttons.get(2);
-
-                test.setOnClickListener(new View.OnClickListener() {
-                    public void onClick(View v) {
-                        testFramebuffer();
-                    }
-                });
-
-                settings.setOnClickListener(new View.OnClickListener() {
-                    public void onClick(View v) {
-                        showSettings();
-                    }
-                });
-
-                record.setOnClickListener(new View.OnClickListener() {
-                    public void onClick(View v) {
-                        if (recording) {
-                            stopRecording();
-                        } else {
-                            startRecording();
-                        }
-                    }
-                });
-            }
-
-            // Inicializa e extrai o binário do FFmpeg contido na pasta assets/
-            initFFmpeg();
-
+            startActivityForResult(projectionManager.createScreenCaptureIntent(), REQUEST_CAPTURE);
         } catch (Exception e) {
-            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            showError("Could not request screen-capture permission", e);
         }
     }
 
-    private void initFFmpeg() {
-        new Thread(new Runnable() {
-            public void run() {
-                try {
-                    ffmpegBin = new File(getFilesDir(), "ffmpeg");
-                    
-                    // Extrai o arquivo apenas se ele não existir para economizar processamento
-                    if (!ffmpegBin.exists()) {
-                        setStatus("Extracting FFmpeg from assets...");
-                        InputStream is = getAssets().open("ffmpeg");
-                        FileOutputStream os = new FileOutputStream(ffmpegBin);
-                        byte[] buffer = new byte[8192];
-                        int read;
-                        while ((read = is.read(buffer)) != -1) {
-                            os.write(buffer, 0, read);
-                        }
-                        os.flush();
-                        os.close();
-                        is.close();
-                    }
-
-                    // Força permissão de execução via terminal root (obrigatório para Gingerbread)
-                    Process p = Runtime.getRuntime().exec("su");
-                    DataOutputStream dos = new DataOutputStream(p.getOutputStream());
-                    dos.writeBytes("chmod 755 " + ffmpegBin.getAbsolutePath() + "\n");
-                    dos.writeBytes("exit\n");
-                    dos.flush();
-                    p.waitFor();
-
-                    setStatus("Ready to record (Root & FFmpeg OK)");
-
-                } catch (Exception e) {
-                    setStatus("FFmpeg initialization error: " + e.getMessage());
-                }
-            }
-        }).start();
-    }
-
-    private void findAllViews(ViewGroup parent, List<View> views) {
-        for (int i = 0; i < parent.getChildCount(); i++) {
-            View child = parent.getChildAt(i);
-            views.add(child);
-            if (child instanceof ViewGroup) {
-                findAllViews((ViewGroup) child, views);
-            }
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != REQUEST_CAPTURE) return;
+        if (resultCode != RESULT_OK || data == null) {
+            status.setText("Permission cancelled — nothing was recorded.");
+            return;
+        }
+        try {
+            projection = projectionManager.getMediaProjection(resultCode, data);
+            if (projection == null) throw new IllegalStateException("Screen capture permission was not granted");
+            startRecording();
+        } catch (Exception e) {
+            releaseCapture();
+            showError("Unable to start recording", e);
         }
     }
 
-    private void testFramebuffer() {
-        new Thread(new Runnable() {
-            public void run() {
-                try {
-                    File out = outputDir();
-                    final File testFile = new File(out, "frame_test.raw");
+    private void startRecording() throws Exception {
+        checkDisplay();
+        File folder = getExternalFilesDir(Environment.DIRECTORY_MOVIES);
+        if (folder == null) folder = new File(getFilesDir(), "recordings");
+        if (!folder.exists() && !folder.mkdirs()) {
+            throw new IllegalStateException("Cannot create recordings folder");
+        }
+        String stamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
+        outputFile = new File(folder, "ScreenVideo_" + stamp + ".mp4");
+        if (outputFile.exists() && !outputFile.delete()) {
+            throw new IllegalStateException("Cannot prepare output file");
+        }
 
-                    Process p = Runtime.getRuntime().exec("su");
-                    DataOutputStream os = new DataOutputStream(p.getOutputStream());
-                    os.writeBytes("cat /dev/graphics/fb0 > " + testFile.getAbsolutePath() + "\n");
-                    os.writeBytes("exit\n");
-                    os.flush();
-                    p.waitFor();
+        mediaRecorder = new MediaRecorder();
+        mediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+        mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
+        mediaRecorder.setVideoEncodingBitRate(6000000);
+        mediaRecorder.setVideoFrameRate(30);
+        mediaRecorder.setVideoSize(screenWidth, screenHeight);
+        mediaRecorder.setOutputFile(outputFile.getAbsolutePath());
+        mediaRecorder.prepare();
 
-                    runOnUiThread(new Runnable() {
-                        public void run() {
-                            if (testFile.exists() && testFile.length() > 0) {
-                                if (status != null) status.setText("TEST OK - " + testFile.length() + " bytes");
-                                if (preview != null) preview.setText("Saved to:\n" + testFile.getName());
-                            } else {
-                                if (status != null) status.setText("ERROR: /dev/graphics/fb0 returned empty");
-                            }
-                        }
-                    });
+        virtualDisplay = projection.createVirtualDisplay(
+                "ScreenVideo-FREE",
+                screenWidth, screenHeight, screenDensity,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                mediaRecorder.getSurface(), null, null);
+        if (virtualDisplay == null) throw new IllegalStateException("Could not create virtual display");
 
-                } catch (final Exception e) {
-                    setStatus("TEST ERROR: " + e.getMessage());
-                }
-            }
-        }).start();
-    }
-
-    private void startRecording() {
-        if (recording) return;
-
+        mediaRecorder.start();
         recording = true;
-        if (record != null) record.setText("STOP");
-        if (status != null) status.setText("RECORDING...");
-
-        recordThread = new Thread(new Runnable() {
-            public void run() {
-                Process suProcess = null;
-                DataOutputStream os = null;
-                int frameCount = 0;
-
-                try {
-                    File out = outputDir();
-                    currentVideoFolder = new File(out, "tmp_" + System.currentTimeMillis());
-                    currentVideoFolder.mkdirs();
-
-                    long timeBetweenFrames = 1000L / FPS;
-                    long nextFrameTime = System.currentTimeMillis();
-
-                    suProcess = Runtime.getRuntime().exec("su");
-                    os = new DataOutputStream(suProcess.getOutputStream());
-
-                    while (recording) {
-                        File frameFile = new File(currentVideoFolder, "frame_" + String.format("%04d", frameCount) + ".raw");
-                        
-                        os.writeBytes("cat /dev/graphics/fb0 > " + frameFile.getAbsolutePath() + "\n");
-                        os.flush();
-
-                        frameCount++;
-                        nextFrameTime += timeBetweenFrames;
-
-                        long sleep = nextFrameTime - System.currentTimeMillis();
-                        if (sleep > 0) {
-                            Thread.sleep(sleep);
-                        }
-                    }
-
-                    os.writeBytes("exit\n");
-                    os.flush();
-                    suProcess.waitFor();
-
-                } catch (final Exception e) {
-                    setStatus("ERROR: " + e.getMessage());
-                } finally {
-                    try { if (os != null) os.close(); } catch (Exception ignored) {}
-                    try { if (suProcess != null) suProcess.destroy(); } catch (Exception ignored) {}
-                }
-
-                if (frameCount > 0) {
-                    convertToMp4(frameCount);
-                } else {
-                    recording = false;
-                    runOnUiThread(new Runnable() {
-                        public void run() {
-                            if (status != null) status.setText("ERROR: 0 frames recorded");
-                            if (record != null) record.setText("RECORD");
-                        }
-                    });
-                }
-            }
-        }, "ScreenVideoRecorder");
-
-        recordThread.start();
+        record.setText("STOP & SAVE");
+        status.setText("RECORDING · SCREEN + VMs");
+        preview.setText("Saving MP4 to app Movies folder\n" + outputFile.getName()
+                + "\n30 FPS · H.264");
     }
 
     private void stopRecording() {
+        if (!recording) return;
         recording = false;
-        if (status != null) status.setText("PROCESSING...");
-    }
-
-    private void convertToMp4(final int totalFrames) {
-        new Thread(new Runnable() {
-            public void run() {
-                try {
-                    File out = outputDir();
-                    final File mp4File = new File(out, "video_" + System.currentTimeMillis() + ".mp4");
-
-                    Process p = Runtime.getRuntime().exec("su");
-                    DataOutputStream os = new DataOutputStream(p.getOutputStream());
-                    
-                    // Usa o binário extraído do assets executando com o path absoluto interno do app
-                    String ffmpegPath = (ffmpegBin != null) ? ffmpegBin.getAbsolutePath() : "ffmpeg";
-                    
-                                        String ffmpegCmd = ffmpegPath + " -f rawvideo -pixel_format rgb565 -video_size 480x800 -framerate " + FPS + 
-                                       " -i " + currentVideoFolder.getAbsolutePath() + "/frame_%04d.raw" +
-                                       " -c:v libx264 -pix_fmt yuv420p -y " + mp4File.getAbsolutePath() + "\n";
-                    
-                    os.writeBytes(ffmpegCmd);
-                    os.writeBytes("exit\n");
-                    os.flush();
-                    final int exitVal = p.waitFor();
-
-                    // Limpeza dos arquivos de frames temporários para liberar espaço
-                    deleteFolderContents(currentVideoFolder);
-                    currentVideoFolder.delete();
-
-                    runOnUiThread(new Runnable() {
-                        public void run() {
-                            recording = false;
-                            if (exitVal == 0 && mp4File.exists() && mp4File.length() > 0) {
-                                if (status != null) status.setText("VIDEO SAVED!");
-                                if (preview != null) preview.setText("MP4 successfully compiled:\n" + mp4File.getName() + "\nTotal Frames: " + totalFrames);
-                            } else {
-                                if (status != null) status.setText("Muxing error (Exit code: " + exitVal + ")");
-                            }
-                            if (record != null) record.setText("RECORD");
-                        }
-                    });
-
-                } catch (Exception e) {
-                    final String errorMsg = e.getMessage();
-                    runOnUiThread(new Runnable() {
-                        public void run() {
-                            recording = false;
-                            setStatus("Muxing error: " + errorMsg);
-                            if (record != null) record.setText("RECORD");
-                        }
-                    });
-                }
+        record.setEnabled(false);
+        status.setText("FINALIZING VIDEO…");
+        boolean stopped = false;
+        try {
+            if (mediaRecorder != null) {
+                mediaRecorder.stop();
+                stopped = true;
             }
-        }).start();
-    }
+        } catch (RuntimeException e) {
+            // MediaRecorder.stop() throws when no valid video frames were encoded.
+        } finally {
+            releaseCapture();
+            record.setEnabled(true);
+            record.setText("START RECORDING");
+        }
 
-    private void deleteFolderContents(File folder) {
-        File[] files = folder.listFiles();
-        if (files != null) {
-            for (File f : files) {
-                f.delete();
-            }
+        if (stopped && outputFile != null && outputFile.isFile() && outputFile.length() > 1024) {
+            status.setText("VIDEO SAVED · " + readableSize(outputFile.length()));
+            preview.setText(outputFile.getAbsolutePath()
+                    + "\n\nThe file was checked and is not empty.");
+            Toast.makeText(this, "Recording saved", Toast.LENGTH_LONG).show();
+        } else {
+            if (outputFile != null && outputFile.exists()) outputFile.delete();
+            status.setText("RECORDING TOO SHORT — NO EMPTY VIDEO KEPT");
+            preview.setText("No valid video was created. Start recording, wait a moment, then stop.");
+            Toast.makeText(this, "No valid frames were captured; empty file removed.", Toast.LENGTH_LONG).show();
         }
     }
 
-    private void setStatus(final String s) {
-        runOnUiThread(new Runnable() {
-            public void run() {
-                if (status != null) status.setText(s);
-            }
-        });
+    private void releaseCapture() {
+        if (virtualDisplay != null) {
+            try { virtualDisplay.release(); } catch (Exception ignored) {}
+            virtualDisplay = null;
+        }
+        if (mediaRecorder != null) {
+            try { mediaRecorder.reset(); } catch (Exception ignored) {}
+            try { mediaRecorder.release(); } catch (Exception ignored) {}
+            mediaRecorder = null;
+        }
+        if (projection != null) {
+            try { projection.stop(); } catch (Exception ignored) {}
+            projection = null;
+        }
+        recording = false;
+    }
+
+    private String readableSize(long bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return String.format(Locale.US, "%.1f KB", bytes / 1024.0);
+        return String.format(Locale.US, "%.1f MB", bytes / (1024.0 * 1024.0));
+    }
+
+    private void showError(String heading, Exception e) {
+        String message = e.getMessage();
+        status.setText("ERROR · " + heading);
+        preview.setText(message == null ? "Unknown recording error" : message);
+        new AlertDialog.Builder(this).setTitle(heading)
+                .setMessage(message == null ? e.getClass().getSimpleName() : message)
+                .setPositiveButton("OK", null).show();
     }
 
     private void showSettings() {
         new AlertDialog.Builder(this)
-            .setTitle("ScreenVideo FREE")
-            .setMessage("Target: " + FPS + " FPS\nOutput format: H.264 MP4 Container\nEngine: Persistent FB0 Pipe & Assets FFmpeg")
-            .setPositiveButton("OK", null)
-            .show();
-    }
-
-    private File outputDir() {
-        File base = Environment.getExternalStorageDirectory();
-        File dir = new File(base, "ScreenVideo");
-        if (!dir.exists()) {
-            dir.mkdirs();
-        }
-        return dir;
+                .setTitle("ScreenVideo FREE")
+                .setMessage("Capture: Android MediaProjection (screen mirror)\n"
+                        + "Video: H.264 in MP4 · 30 FPS\n"
+                        + "Audio: not captured in this build\n"
+                        + "Output: app-specific Movies folder\n\n"
+                        + "Keep the VM visible on the device screen while recording.")
+                .setPositiveButton("OK", null).show();
     }
 
     @Override
     protected void onDestroy() {
-        recording = false;
-        if (recordThread != null) {
-            recordThread.interrupt();
+        if (recording) {
+            // Stop safely; if no frames exist, stopRecording removes the invalid output.
+            stopRecording();
+        } else {
+            releaseCapture();
         }
         super.onDestroy();
     }
