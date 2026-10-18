@@ -32,6 +32,8 @@ jobs:
           echo "$SDK/cmdline-tools/legacy/bin" >> "$GITHUB_PATH"
           yes | "$SDK/cmdline-tools/legacy/bin/sdkmanager" --licenses || true
           "$SDK/cmdline-tools/legacy/bin/sdkmanager" "platform-tools" "platforms;android-28" "build-tools;28.0.3"
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
       - name: Build Android 1.5/1.6 and 2.0/4.4 APKs
         run: ./gradlew assembleCupcakeDebug assembleLegacyDebug --stacktrace
       - name: Upload APKs
