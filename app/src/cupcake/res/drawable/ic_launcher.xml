@@ -1,16 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Android 1.5/1.6 era: simplified 3D icon with fixed three-quarter perspective,
+     rounded silhouette, transparent outside, and restrained accent colors. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:left="2dp" android:top="3dp" android:right="2dp" android:bottom="1dp">
-        <shape android:shape="rectangle"><corners android:radius="9dp"/><gradient android:angle="270" android:startColor="#526D7D" android:endColor="#101D26"/><stroke android:width="1dp" android:color="#0A151D"/></shape>
+    <!-- Cast shadow and dark side face -->
+    <item android:left="5dp" android:top="7dp" android:right="3dp" android:bottom="3dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="6dp"/>
+            <gradient android:angle="0" android:startColor="#263B48" android:endColor="#111F29"/>
+            <stroke android:width="1dp" android:color="#172731"/>
+        </shape>
     </item>
-    <item android:left="6dp" android:top="9dp" android:right="6dp" android:bottom="8dp">
-        <shape android:shape="rectangle"><corners android:radius="5dp"/><gradient android:angle="270" android:startColor="#F7FFFF" android:centerColor="#A8D7E7" android:endColor="#397F9D"/><stroke android:width="1dp" android:color="#E7FAFF"/></shape>
+    <!-- Raised top surface, offset to suggest the old fixed perspective -->
+    <item android:left="3dp" android:top="3dp" android:right="7dp" android:bottom="7dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="6dp"/>
+            <gradient android:angle="270" android:startColor="#B5C8CF" android:centerColor="#718D9A" android:endColor="#435C69"/>
+            <stroke android:width="1dp" android:color="#D3E0E4"/>
+        </shape>
     </item>
-    <item android:left="10dp" android:top="13dp" android:right="10dp" android:bottom="12dp">
-        <shape android:shape="rectangle"><corners android:radius="3dp"/><gradient android:angle="270" android:startColor="#314B5B" android:endColor="#0C1B27"/><stroke android:width="1dp" android:color="#BCEBFA"/></shape>
+    <!-- Camera body -->
+    <item android:left="7dp" android:top="10dp" android:right="11dp" android:bottom="11dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="4dp"/>
+            <gradient android:angle="270" android:startColor="#4D6673" android:endColor="#253A46"/>
+            <stroke android:width="1dp" android:color="#1B2B34"/>
+        </shape>
     </item>
-    <item android:left="15dp" android:top="17dp" android:right="15dp" android:bottom="16dp">
-        <shape android:shape="oval"><gradient android:angle="315" android:startColor="#FFFFFF" android:centerColor="#64D5F5" android:endColor="#145A93"/><stroke android:width="1dp" android:color="#D5F7FF"/></shape>
+    <!-- Lens bezel -->
+    <item android:left="12dp" android:top="14dp" android:right="16dp" android:bottom="15dp">
+        <shape android:shape="oval">
+            <gradient android:angle="270" android:startColor="#D6D9C8" android:centerColor="#879CA0" android:endColor="#3A5665"/>
+            <stroke android:width="1dp" android:color="#D9E0D7"/>
+        </shape>
     </item>
-    <item android:left="17dp" android:top="18dp" android:right="17dp" android:bottom="18dp"><shape android:shape="oval"><solid android:color="#EAFBFF"/></shape></item>
+    <!-- Lens glass -->
+    <item android:left="15dp" android:top="17dp" android:right="19dp" android:bottom="18dp">
+        <shape android:shape="oval">
+            <gradient android:angle="315" android:startColor="#9AD9E2" android:centerColor="#3B8FA8" android:endColor="#173C57"/>
+            <stroke android:width="1dp" android:color="#263F4B"/>
+        </shape>
+    </item>
+    <!-- Small record indicator -->
+    <item android:left="23dp" android:top="11dp" android:right="12dp" android:bottom="24dp">
+        <shape android:shape="oval"><solid android:color="#D77B55"/></shape>
+    </item>
 </layer-list>
