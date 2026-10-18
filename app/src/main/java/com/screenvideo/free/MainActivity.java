@@ -177,7 +177,7 @@ public class MainActivity extends Activity {
                     + " -video_size " + width + "x" + height
                     + " -framerate 5 -i " + sessionDir.getAbsolutePath() + "/frame_%06d.raw"
                     + " -an -c:v libx264 -pix_fmt yuv420p " + outputVideo.getAbsolutePath();
-            int code = root(cmd);
+            int code = rootExitCode(cmd + " > " + new File(outputDir, "ffmpeg.log").getAbsolutePath() + " 2>&1");
             deleteContents(sessionDir); sessionDir.delete();
             validateVideo(outputVideo, code);
         } catch (Exception e) { finishFailure("MP4 conversion failed: " + e.getMessage()); }
@@ -221,6 +221,26 @@ public class MainActivity extends Activity {
         while ((n = in.read(b)) > 0) out.write(b, 0, n);
         p.waitFor();
         return new String(out.toByteArray());
+    }
+
+    private int rootExitCode(String command) throws Exception {
+        Process p = Runtime.getRuntime().exec("su");
+        DataOutputStream os = new DataOutputStream(p.getOutputStream());
+        os.writeBytes(command + "\necho __SV_EXIT:$?\nexit\n");
+        os.flush(); os.close();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        InputStream in = p.getInputStream(); byte[] b = new byte[512]; int n;
+        while ((n = in.read(b)) > 0) out.write(b, 0, n);
+        p.waitFor();
+        String result = new String(out.toByteArray());
+        int marker = result.lastIndexOf("__SV_EXIT:");
+        if (marker >= 0) {
+            int start = marker + 10;
+            int end = result.indexOf("\n", start);
+            if (end < 0) end = result.length();
+            try { return Integer.parseInt(result.substring(start, end).trim()); } catch (Exception ignored) {}
+        }
+        return 127;
     }
 
     private String readSmallFile(File file) {
