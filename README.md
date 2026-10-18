@@ -1,33 +1,35 @@
-# ScreenVideo FREE
+# ScreenVideo FREE — Legacy VM Recorder
 
-A lightweight Android screen recorder designed to capture virtual machines (VMs) while they are visible on the device display.
+Video-only screen recorder aimed at Android 1.5 through Android 4.4, for recording the visible screen while a virtual machine/emulator is open.
 
-## What changed in 0.2
+## APK variants
 
-- Replaced the fragile `/dev/graphics/fb0` + shell + FFmpeg pipeline with Android's MediaProjection screen-capture API and MediaRecorder.
-- Records the visible device screen, so an on-screen VM (Virtual Master, Limbo, or another emulator) is captured like a normal screen recorder.
-- Uses H.264 video in an MP4 container at 30 FPS.
-- Validates the finished recording and deletes invalid/empty output files instead of reporting success for a zero-byte recording.
-- Improved the interface with a cleaner dark layout and direct view IDs (no fragile view-order detection).
-- Saves recordings in the app-specific Movies directory, which avoids legacy shared-storage permission problems.
+- `cupcakeDebug`: Android 1.5 / 1.6 era (min SDK 3; target SDK 4), with a retro launcher icon.
+- `legacyDebug`: Android 2.0 through 4.4 (min SDK 5; target SDK 19), with a separate launcher icon.
 
-## Requirements and limitations
+## Capture methods
 
-- Android 5.0 (API 21) or newer. MediaProjection is required for reliable screen capture; Android 2.3/4.x are no longer supported by this recording implementation.
-- Android displays a system permission prompt before each capture session.
-- Keep the VM visible on the phone screen while recording. This records what is displayed, not a VM's internal framebuffer directly.
-- This version records video only; system audio and microphone audio are not implemented.
-- A recording must run long enough for the encoder to produce valid frames. If finalization fails or the output is too small, the invalid file is deleted and the UI reports the failure.
-- Some protected apps may show a black screen because Android prevents screen capture of protected content.
+- Android 4.4 (API 19): root launches Android's `screenrecord` command to record MP4/H.264.
+- Android 1.5–4.3: root framebuffer snapshots from `/dev/graphics/fb0`, then bundled FFmpeg encodes a silent MP4.
+
+**Compatibility caveat:** Android 1.5–4.3 framebuffer devices vary in pixel format, stride, permissions, and node path. This fallback is best-effort and must be tested on each device. Root access is required, and a generic APK cannot guarantee capture on every old device.
+
+## Empty-file protection
+
+The app checks FFmpeg's exit status and verifies the MP4 exists and exceeds 1 KiB. Invalid output is deleted and reported as a failure.
+
+## Video only
+
+No microphone or system audio is recorded.
 
 ## Build
 
-Open the project in Android Studio and build with the Android SDK:
-
 ```sh
-./gradlew assembleDebug
+./gradlew assembleCupcakeDebug assembleLegacyDebug
 ```
 
-APK output: `app/build/outputs/apk/debug/app-debug.apk`.
+Artifacts are generated under `app/build/outputs/apk/`.
 
-No FFmpeg binary is bundled or required.
+## Sharing website
+
+The `docs/` directory is intended for GitHub Pages. A static page can provide previews and share links after a video is uploaded to storage. A real public upload feature needs a configured storage/backend provider; the site must not claim a local preview is already public.
