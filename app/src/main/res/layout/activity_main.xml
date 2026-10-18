@@ -118,7 +118,7 @@
             android:textColor="#061610"
             android:textStyle="bold"
             android:textSize="16sp"
-            android:backgroundTint="#5CE0B5"
+            android:background="@drawable/button_record"
             android:layout_marginTop="18dp"
             android:layout_width="match_parent"
             android:layout_height="58dp" />
@@ -133,7 +133,7 @@
                 android:id="@+id/test"
                 android:text="CHECK DISPLAY"
                 android:textColor="#DDE7F5"
-                android:backgroundTint="#26364B"
+                android:background="@drawable/button"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
                 android:layout_weight="1" />
@@ -153,7 +153,7 @@
         </LinearLayout>
 
         <TextView
-            android:text="H.264 MP4  •  30 FPS  •  SCREEN MIRROR"
+            android:text="SILENT MP4  •  ROOT ACCESS  •  ANDROID 1.5–4.4"
             android:textColor="#7E91AA"
             android:textSize="11sp"
             android:gravity="center"
@@ -162,7 +162,7 @@
             android:layout_height="wrap_content" />
 
         <TextView
-            android:text="Tip: open your VM first and keep it visible during recording."
+            android:text="Root is required. Keep your VM visible; legacy framebuffer support varies by device."
             android:textColor="#7E91AA"
             android:textSize="12sp"
             android:gravity="center"
