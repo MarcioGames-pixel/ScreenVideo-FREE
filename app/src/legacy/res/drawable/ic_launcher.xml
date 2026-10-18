@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Eclair through KitKat (Android 2.0–4.4): centered, front-facing, tactile matte
+     camera symbol with restrained top lighting and a small shadow; no perspective. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Small, soft-looking offset shadow -->
+    <item android:left="4dp" android:top="5dp" android:right="3dp" android:bottom="2dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="4dp"/>
+            <solid android:color="#44303B42"/>
+        </shape>
+    </item>
+    <!-- Flat front face -->
+    <item android:left="3dp" android:top="3dp" android:right="4dp" android:bottom="4dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="4dp"/>
+            <gradient android:angle="270" android:startColor="#9BAEB2" android:centerColor="#718991" android:endColor="#526B75"/>
+            <stroke android:width="1dp" android:color="#405760"/>
+        </shape>
+    </item>
+    <!-- Viewfinder frame -->
+    <item android:left="7dp" android:top="10dp" android:right="7dp" android:bottom="9dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="3dp"/>
+            <solid android:color="#D2D8CE"/>
+            <stroke android:width="1dp" android:color="#455E67"/>
+        </shape>
+    </item>
+    <!-- Dark lens well -->
+    <item android:left="10dp" android:top="13dp" android:right="10dp" android:bottom="12dp">
+        <shape android:shape="oval">
+            <solid android:color="#344F5D"/>
+            <stroke android:width="1dp" android:color="#263D48"/>
+        </shape>
+    </item>
+    <!-- Lens glass, simple and matte -->
+    <item android:left="13dp" android:top="16dp" android:right="13dp" android:bottom="15dp">
+        <shape android:shape="oval">
+            <gradient android:angle="315" android:startColor="#A8D4D5" android:centerColor="#568FA0" android:endColor="#2B5366"/>
+            <stroke android:width="1dp" android:color="#6E969C"/>
+        </shape>
+    </item>
+    <!-- Small red recording lamp -->
+    <item android:left="22dp" android:top="8dp" android:right="8dp" android:bottom="25dp">
+        <shape android:shape="oval">
+            <solid android:color="#C96B50"/>
+            <stroke android:width="1dp" android:color="#E5A18B"/>
+        </shape>
+    </item>
+</layer-list>

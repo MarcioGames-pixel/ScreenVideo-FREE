@@ -1,43 +1,35 @@
-# ScreenVideo FREE
+# ScreenVideo FREE — Legacy VM Recorder
 
-Nostalgic Android framebuffer recorder prototype for Android VMs and old Android devices.
+Video-only screen recorder aimed at Android 1.5 through Android 4.4, for recording the visible screen while a virtual machine/emulator is open.
 
-## Target
-- minSdkVersion 10 (Android 2.3 / Gingerbread)
-- Java
-- RGB565 framebuffer input
-- Default framebuffer: `/dev/graphics/fb0`
-- Default capture size: 480x800
-- Default FPS: 4
+## APK variants
 
-## Important
-The project deliberately does NOT bundle an FFmpeg binary. FFmpeg binaries are platform/build dependent and have separate licensing considerations.
+- `cupcakeDebug`: Android 1.5 / 1.6 era (min SDK 3; target SDK 4), with a glossy, beveled 3D-style camera icon.
+- `legacyDebug`: Android 2.0 through 4.4 (min SDK 5; target SDK 19), with a separate glossy blue-green 3D-style camcorder icon.
 
-The app can:
-1. detect the framebuffer;
-2. test/read one RGB565 frame;
-3. capture a sequence of frames to a raw `.rgb565` file;
-4. optionally invoke an FFmpeg executable if one is available and accessible.
+## Capture methods
 
-For the VM used during development, the framebuffer was observed as RGB565 little-endian, 480x800, 768000 bytes/frame.
+- Android 4.4 (API 19): root launches Android's `screenrecord` command to record MP4/H.264.
+- Android 1.5–4.3: root framebuffer snapshots from `/dev/graphics/fb0`, then bundled FFmpeg encodes a silent MP4.
 
-### Permissions
-A normal Android application cannot automatically access another process' `/dev/graphics/fb0`.
-The VM must expose the framebuffer with permissions that the app UID can read, or a privileged/helper setup must provide access.
+**Compatibility caveat:** Android 1.5–4.3 framebuffer devices vary in pixel format, stride, permissions, and node path. This fallback is best-effort and must be tested on each device. It may capture a visible game because it reads the screen framebuffer, but some GPU overlays, protected surfaces, unusual framebuffer formats, or games that pause when backgrounded can prevent reliable capture. Keep the game visible while recording. Root access is required, and a generic APK cannot guarantee capture on every old device.
 
-### Building
-Open the project folder in Android Studio and let Android Studio use/download the Android Gradle Plugin dependencies and an Android SDK.
+## Empty-file protection
 
-Build:
-`./gradlew assembleDebug`
+The app checks FFmpeg's exit status and verifies the MP4 exists and exceeds 1 KiB. Invalid output is deleted and reported as a failure.
 
-The resulting APK is under:
-`app/build/outputs/apk/debug/`
+## Video only
 
-## UI
-The UI intentionally uses a dark, glossy, early-2010s Android/HTC-inspired style without copying HTC assets.
+No microphone or system audio is recorded. On supported devices, capture targets the whole visible display rather than only the recorder app, so a game can be recorded while it is on screen. This is not a guarantee for every device/game; background capture and stable frame rates are especially limited on Android 1.5–4.3.
 
-## Current 0.1 limitations
-- MP4 encoding depends on an FFmpeg executable being supplied separately.
-- Audio capture is not implemented yet.
-- Root/privileged framebuffer access is not implemented.
+## Build
+
+```sh
+./gradlew assembleCupcakeDebug assembleLegacyDebug
+```
+
+Artifacts are generated under `app/build/outputs/apk/`.
+
+## Sharing website
+
+The `docs/` directory is intended for GitHub Pages. A static page can provide previews and share links after a video is uploaded to storage. A real public upload feature needs a configured storage/backend provider; the site must not claim a local preview is already public.

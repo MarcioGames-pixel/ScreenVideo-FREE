@@ -2,129 +2,45 @@ name: Build ScreenVideo FREE
 
 on:
   push:
-    branches:
-      - main
-      - master
+    branches: [main, master]
+  pull_request:
   workflow_dispatch:
 
 jobs:
   build:
-    name: Build APK
     runs-on: ubuntu-22.04
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Install legacy Android command-line tools
-        shell: bash
-        run: |
-          set -e
-
-          SDK="$HOME/android-sdk"
-
-          rm -rf "$SDK"
-          rm -rf /tmp/cmdline-tools
-          rm -f /tmp/cmdline-tools.zip
-
-          mkdir -p "$SDK/cmdline-tools"
-          mkdir -p /tmp/cmdline-tools
-
-          wget -q \
-            "https://dl.google.com/android/repository/commandlinetools-linux-6609375_latest.zip" \
-            -O /tmp/cmdline-tools.zip
-
-          unzip -q /tmp/cmdline-tools.zip \
-            -d /tmp/cmdline-tools
-
-          echo "Estrutura do ZIP:"
-          find /tmp/cmdline-tools -maxdepth 5 -type f | head -100
-
-          SDKMANAGER=$(find /tmp/cmdline-tools \
-            -type f \
-            -name sdkmanager \
-            | head -n 1)
-
-          if [ -z "$SDKMANAGER" ]; then
-            echo "ERRO: sdkmanager não encontrado"
-            exit 1
-          fi
-
-          TOOLS_DIR=$(dirname "$(dirname "$SDKMANAGER")")
-
-          echo "Tools encontradas em:"
-          echo "$TOOLS_DIR"
-
-          mkdir -p "$SDK/cmdline-tools/legacy"
-
-          cp -R "$TOOLS_DIR"/. \
-            "$SDK/cmdline-tools/legacy/"
-
-          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
-          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
-          echo "$SDK/cmdline-tools/legacy/bin" >> "$GITHUB_PATH"
-          echo "$SDK/platform-tools" >> "$GITHUB_PATH"
-
-          echo "Conteúdo das ferramentas:"
-          find "$SDK/cmdline-tools/legacy" \
-            -maxdepth 3 \
-            -type f \
-            | head -100
-
-          echo "Testando sdkmanager:"
-
-          "$SDK/cmdline-tools/legacy/bin/sdkmanager" \
-            --version
-
-      - name: Install Android SDK packages
-        shell: bash
-        run: |
-          set -e
-
-          yes | sdkmanager --licenses || true
-
-          sdkmanager \
-            "platform-tools" \
-            "platforms;android-28" \
-            "build-tools;28.0.3"
-
-      - name: Setup Java 11
+      - uses: actions/checkout@v4
+      - name: Set up Java 11
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '11'
-
-      - name: Check SDK
+      - name: Install Android SDK
         shell: bash
         run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-          sdkmanager --version
-
-      - name: Make Gradle executable
-        shell: bash
-        run: |
-          chmod +x gradlew
-
-      - name: Clean
-        shell: bash
-        run: |
-          ./gradlew clean
-
-      - name: Build Debug APK
-        shell: bash
-        run: |
-          ./gradlew assembleDebug --stacktrace
-
-      - name: Upload APK
+          set -e
+          SDK="$HOME/android-sdk"
+          mkdir -p "$SDK/cmdline-tools" /tmp/android-tools
+          wget -q "https://dl.google.com/android/repository/commandlinetools-linux-6609375_latest.zip" -O /tmp/android-tools.zip
+          unzip -q /tmp/android-tools.zip -d /tmp/android-tools
+          TOOLS_DIR=$(find /tmp/android-tools -type f -name sdkmanager | head -n 1 | xargs dirname | xargs dirname)
+          mkdir -p "$SDK/cmdline-tools/legacy"
+          cp -R "$TOOLS_DIR"/. "$SDK/cmdline-tools/legacy/"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          echo "$SDK/cmdline-tools/legacy/bin" >> "$GITHUB_PATH"
+          yes | "$SDK/cmdline-tools/legacy/bin/sdkmanager" --licenses || true
+          "$SDK/cmdline-tools/legacy/bin/sdkmanager" "platform-tools" "platforms;android-28" "build-tools;28.0.3"
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+      - name: Build Android 1.5/1.6 and 2.0/4.4 APKs
+        run: ./gradlew assembleCupcakeDebug assembleLegacyDebug --stacktrace
+      - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
-          name: ScreenVideo-FREE-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: ScreenVideo-FREE-legacy-apks
+          path: |
+            app/build/outputs/apk/cupcake/debug/*.apk
+            app/build/outputs/apk/legacy/debug/*.apk
           if-no-files-found: error

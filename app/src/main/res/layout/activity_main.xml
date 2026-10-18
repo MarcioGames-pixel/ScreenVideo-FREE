@@ -1,103 +1,174 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
-    android:background="#FF121C24"
-    android:padding="10dp"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="#0B111B">
 
     <LinearLayout
-        android:gravity="center_vertical"
-        android:background="#FF1A2630"
+        android:orientation="vertical"
+        android:padding="18dp"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:paddingLeft="8dp"
-        android:paddingRight="8dp">
+        android:layout_height="wrap_content">
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="16dp"
+            android:background="#151F2D"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:text="●"
+                android:textColor="#5CE0B5"
+                android:textSize="24sp"
+                android:layout_marginRight="12dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1">
+
+                <TextView
+                    android:text="ScreenVideo FREE"
+                    android:textColor="#F3F7FF"
+                    android:textSize="21sp"
+                    android:textStyle="bold"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+                <TextView
+                    android:text="SCREEN RECORDER FOR VMs"
+                    android:textColor="#91A5BE"
+                    android:textSize="11sp"
+                    android:letterSpacing="0.08"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+
+            <TextView
+                android:text="FREE"
+                android:textColor="#5CE0B5"
+                android:textStyle="bold"
+                android:textSize="11sp"
+                android:padding="7dp"
+                android:background="#203B3A"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
 
         <TextView
-            android:textSize="20sp"
+            android:text="RECORD YOUR VIRTUAL MACHINE"
+            android:textColor="#F3F7FF"
             android:textStyle="bold"
-            android:textColor="#FFE7EDF2"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:text="ScreenVideo FREE"
-            android:layout_weight="1.0" />
+            android:textSize="16sp"
+            android:layout_marginTop="24dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
 
         <TextView
-            android:id="@+id/version"
+            android:id="@+id/status"
+            android:text="READY TO RECORD"
+            android:textColor="#5CE0B5"
+            android:textStyle="bold"
+            android:textSize="13sp"
+            android:gravity="center_vertical"
+            android:padding="14dp"
+            android:layout_marginTop="12dp"
+            android:background="#142A2B"
+            android:layout_width="match_parent"
+            android:layout_height="52dp" />
+
+        <LinearLayout
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="22dp"
+            android:layout_marginTop="12dp"
+            android:background="#151F2D"
+            android:layout_width="match_parent"
+            android:layout_height="180dp">
+
+            <TextView
+                android:text="▣"
+                android:textColor="#6F8DFF"
+                android:textSize="34sp"
+                android:gravity="center"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <TextView
+                android:id="@+id/preview"
+                android:text="DISPLAY INFORMATION"
+                android:textColor="#C5D1E2"
+                android:textSize="14sp"
+                android:gravity="center"
+                android:lineSpacingExtra="4dp"
+                android:layout_marginTop="8dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/record"
+            android:text="START RECORDING"
+            android:textColor="#061610"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:background="@drawable/button_record"
+            android:layout_marginTop="18dp"
+            android:layout_width="match_parent"
+            android:layout_height="58dp" />
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_marginTop="10dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <Button
+                android:id="@+id/test"
+                android:text="CHECK DISPLAY"
+                android:textColor="#DDE7F5"
+                android:background="@drawable/button"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1" />
+
+            <View
+                android:layout_width="10dp"
+                android:layout_height="1dp" />
+
+            <Button
+                android:id="@+id/settings"
+                android:text="SETTINGS"
+                android:textColor="#DDE7F5"
+                android:backgroundTint="#26364B"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1" />
+        </LinearLayout>
+
+        <TextView
+            android:text="SILENT MP4  •  ROOT ACCESS  •  ANDROID 1.5–4.4"
+            android:textColor="#7E91AA"
+            android:textSize="11sp"
+            android:gravity="center"
+            android:layout_marginTop="18dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <TextView
+            android:text="Root is required. Keep your VM visible; legacy framebuffer support varies by device."
+            android:textColor="#7E91AA"
             android:textSize="12sp"
-            android:textColor="#FF9EACB7"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="v0.1" />
+            android:gravity="center"
+            android:layout_marginTop="8dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
 
     </LinearLayout>
-
-    <TextView
-        android:textStyle="bold"
-        android:textColor="#FFB8D5E8"
-        android:gravity="center"
-        android:background="#FF1A2630"
-        android:layout_width="match_parent"
-        android:layout_height="42dp"
-        android:layout_marginTop="10dp"
-        android:text="READY" />
-
-    <TextView
-        android:textSize="18sp"
-        android:textColor="#FF7F909D"
-        android:gravity="center"
-        android:background="#FF1A2630"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginTop="10dp"
-        android:text="FRAMEBUFFER 480 × 800 RGBA"
-        android:layout_weight="1.0" />
-
-    <LinearLayout
-        android:orientation="horizontal"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp">
-
-        <Button
-            android:id="@+id/test"
-            android:textColor="#FFEEF4F8"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:text="TEST"
-            android:layout_weight="1.0" />
-
-        <View
-            android:layout_width="8dp"
-            android:layout_height="1dp" />
-
-        <Button
-            android:id="@+id/settings"
-            android:textColor="#FFEEF4F8"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:text="SETTINGS"
-            android:layout_weight="1.0" />
-
-    </LinearLayout>
-
-    <Button
-        android:id="@+id/record"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:textColor="#FFFFFFFF"
-        android:layout_width="match_parent"
-        android:layout_height="58dp"
-        android:layout_marginTop="10dp"
-        android:text="RECORD" />
-
-    <TextView
-        android:textSize="11sp"
-        android:textColor="#FF81919D"
-        android:gravity="center"
-        android:layout_width="match_parent"
-        android:layout_height="36dp"
-        android:text="5 FPS  •  32-bit RGBA  •  Shell Muxer" />
-
-</LinearLayout>
+</ScrollView>
