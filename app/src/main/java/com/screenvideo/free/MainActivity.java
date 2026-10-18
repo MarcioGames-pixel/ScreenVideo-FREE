@@ -75,19 +75,43 @@ public class MainActivity extends Activity {
     }
 
     private void testRoot() {
+        // Display information must be available even when this device has no root.
+        final String displayInfo = "DISPLAY CHECK\n"
+                + "Resolution: " + width + " × " + height + "\n"
+                + "Android API: " + sdk + "\n"
+                + "Capture mode: " + (sdk >= 19 ? "screenrecord (Android 4.4+)" : "framebuffer (Android 1.5–4.3)")
+                + "\n\nChecking root and capture-device access…";
+        details.setText(displayInfo);
+        status.setText("CHECKING DISPLAY…");
+        findViewById(R.id.test).setEnabled(false);
         new Thread(new Runnable() {
             public void run() {
+                String result;
                 try {
-                    final String result = root("id; ls -l /dev/graphics/fb0; command -v screenrecord");
-                    runOnUiThread(new Runnable() {
-                        public void run() {
-                            status.setText("ROOT CHECK FINISHED");
-                            details.setText(result.length() == 0 ? "Command finished." : result);
-                        }
-                    });
-                } catch (final Exception e) { setStatus("ROOT ERROR: " + e.getMessage()); }
+                    result = root("echo __SV_ROOT_CHECK__; id 2>&1; "
+                            + "if [ -r /dev/graphics/fb0 ]; then ls -l /dev/graphics/fb0 2>&1; "
+                            + "else echo 'Framebuffer unavailable or not readable: /dev/graphics/fb0'; fi; "
+                            + "if command -v screenrecord >/dev/null 2>&1; then "
+                            + "echo 'screenrecord: available'; else echo 'screenrecord: unavailable'; fi");
+                    if (result == null || result.trim().length() == 0) {
+                        result = "No command output returned. Root may be unavailable or permission was denied.";
+                    }
+                } catch (Exception e) {
+                    result = "Display: " + width + " × " + height + "\nAndroid API: " + sdk
+                            + "\nRoot check failed: " + e.getClass().getName()
+                            + (e.getMessage() == null ? "" : "\n" + e.getMessage())
+                            + "\n\nThe display information above is still valid.";
+                }
+                final String finalResult = displayInfo + "\n\nROOT / CAPTURE DIAGNOSTICS\n" + result;
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        findViewById(R.id.test).setEnabled(true);
+                        status.setText("DISPLAY CHECK FINISHED");
+                        details.setText(finalResult);
+                    }
+                });
             }
-        }).start();
+        }, "ScreenVideoDisplayCheck").start();
     }
 
     private void startRecording() {
