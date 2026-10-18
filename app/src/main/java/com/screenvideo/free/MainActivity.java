@@ -51,7 +51,7 @@ public class MainActivity extends Activity {
         initPaths();
         extractFFmpeg();
         status.setText("READY · ANDROID " + sdk);
-        details.setText(width + " × " + height + "\nVideo only · root access required");
+        details.setText(width + " × " + height + "\nSilent video · root required\nGames: device support required");
     }
 
     private void initPaths() {
@@ -262,7 +262,7 @@ public class MainActivity extends Activity {
                 .setMessage("Android 4.4: root screenrecord command.\n"
                         + "Android 1.5–4.3: root framebuffer + bundled FFmpeg.\n"
                         + "Video only; no system audio or microphone.\n"
-                        + "Framebuffer formats vary by device.\nOutput: /sdcard/ScreenVideo/")
+                        + "Framebuffer formats vary by device.\nGames can be captured if their frames reach the screen framebuffer.\nKeep the game visible; overlays/protected surfaces may fail.\nOutput: /sdcard/ScreenVideo/")
                 .setPositiveButton("OK", null).show();
     }
 
